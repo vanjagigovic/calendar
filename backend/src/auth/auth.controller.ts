@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
