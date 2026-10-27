@@ -33,24 +33,25 @@ const WEEKDAY_LABELS = [
 interface CalendarMonthGridProps {
   cells: Date[];
   currentDate: Date;
+  selectedDayKey: string;
   events: CalendarEvent[];
   viewTimeZone: string;
   isMobile: boolean;
-  onOpenCreateForDay: (day: Date) => void;
+  onSelectDay: (day: Date) => void;
   onEditEvent: (event: CalendarEvent) => void;
 }
 
 export function CalendarMonthGrid({
   cells,
   currentDate,
+  selectedDayKey,
   events,
   viewTimeZone,
   isMobile,
-  onOpenCreateForDay,
+  onSelectDay,
   onEditEvent,
 }: CalendarMonthGridProps) {
   const todayKey = formatDateKey(new Date());
-  const selectedDayKey = formatDateKey(currentDate);
 
   /**
    * Pre-group events by day (performance boost)
@@ -95,7 +96,9 @@ export function CalendarMonthGrid({
               key={dayKey}
               variant="outlined"
               sx={monthGridDayCardSx(isToday, isSelected, isOutsideMonth)}
-              onClick={() => onOpenCreateForDay(day)}
+              data-testid={`month-day-${dayKey}`}
+              aria-selected={isSelected}
+              onClick={() => onSelectDay(day)}
             >
               <Typography
                 variant={isMobile ? "caption" : "subtitle2"}

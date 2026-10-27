@@ -1,16 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { findFreeSlot, getDayEvents } from "../api/assistant-api";
+import { createChatMessage, type ChatMessage } from "../helpers/chat-helpers";
 import {
-  createChatMessage,
-  requestMockAssistantReply,
-  type ChatMessage,
-} from "../helpers/chat-mock-helpers";
+  buildFreeSlotWindow,
+  formatChatDate,
+  formatDayEventsMessage,
+  formatFreeSlotMessage,
+} from "../helpers/chat-format-helpers";
+import { getErrorMessage } from "../helpers/client-state-helpers";
 
-export function useChatConversation() {
+interface UseChatConversationOptions {
+  date: string;
+  timeZone: string;
+}
+
+export function useChatConversation({
+  date,
+  timeZone,
+}: UseChatConversationOptions) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isPending, setIsPending] = useState(false);
   const pendingRef = useRef(false);
-  const userMessageCountRef = useRef(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -20,36 +33,111 @@ export function useChatConversation() {
     };
   }, []);
 
-  const sendMessage = useCallback(async (text: string) => {
-    const content = text.trim();
+  const appendMessage = useCallback(
+    (role: ChatMessage["role"], content: string) => {
+      setMessages((current) => [...current, createChatMessage(role, content)]);
+    },
+    [],
+  );
 
-    if (!content || pendingRef.current) {
-      return;
-    }
-
-    pendingRef.current = true;
-    userMessageCountRef.current += 1;
-    setMessages((current) => [...current, createChatMessage("user", content)]);
-    setIsPending(true);
-
-    try {
-      const reply = await requestMockAssistantReply(
-        userMessageCountRef.current,
-      );
-
-      if (mountedRef.current) {
-        setMessages((current) => [
-          ...current,
-          createChatMessage("assistant", reply),
-        ]);
+  const runAction = useCallback(
+    async (userText: string, produceReply: () => Promise<string>) => {
+      if (pendingRef.current) {
+        return;
       }
-    } finally {
-      pendingRef.current = false;
-      if (mountedRef.current) {
-        setIsPending(false);
-      }
-    }
-  }, []);
 
-  return { messages, isPending, sendMessage };
+      pendingRef.current = true;
+      appendMessage("user", userText);
+      setIsPending(true);
+
+      try {
+        const reply = await produceReply();
+
+        if (mountedRef.current) {
+          appendMessage("assistant", reply);
+        }
+      } catch (error) {
+        if (mountedRef.current) {
+          appendMessage(
+            "assistant",
+            t("chatRequestFailed", {
+              message: getErrorMessage(error, t("chatRequestFailedFallback")),
+            }),
+          );
+        }
+      } finally {
+        pendingRef.current = false;
+        if (mountedRef.current) {
+          setIsPending(false);
+        }
+      }
+    },
+    [appendMessage, t],
+  );
+
+  // Free text is not understood yet; reply with a fixed hint, never calendar data.
+  const sendMessage = useCallback(
+    (text: string) => {
+      const content = text.trim();
+
+      if (!content || pendingRef.current) {
+        return;
+      }
+
+      appendMessage("user", content);
+      appendMessage("assistant", t("chatFreeTextHint"));
+    },
+    [appendMessage, t],
+  );
+
+  const showDayEvents = useCallback(
+    () =>
+      runAction(
+        t("chatUserDayEvents", { date: formatChatDate(date, timeZone) }),
+        async () =>
+          formatDayEventsMessage(
+            await getDayEvents(date, timeZone),
+            date,
+            timeZone,
+            t,
+          ),
+      ),
+    [date, runAction, t, timeZone],
+  );
+
+  const findFreeTime = useCallback(
+    (durationMinutes: number) =>
+      runAction(
+        t("chatUserFreeTime", {
+          minutes: durationMinutes,
+          date: formatChatDate(date, timeZone),
+        }),
+        async () => {
+          const window = buildFreeSlotWindow(date, timeZone);
+
+          if (!window) {
+            return t("chatFreeSlotPastDay", {
+              date: formatChatDate(date, timeZone),
+            });
+          }
+
+          const response = await findFreeSlot(
+            window.startUtc,
+            window.endUtc,
+            durationMinutes,
+          );
+
+          return formatFreeSlotMessage(
+            response,
+            window,
+            durationMinutes,
+            timeZone,
+            t,
+          );
+        },
+      ),
+    [date, runAction, t, timeZone],
+  );
+
+  return { messages, isPending, sendMessage, showDayEvents, findFreeTime };
 }

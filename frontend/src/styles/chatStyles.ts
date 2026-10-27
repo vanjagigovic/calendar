@@ -68,6 +68,17 @@ export const chatMessageSx =
         }),
   });
 
+export const chatQuickActionsSx: SxProps<Theme> = (theme) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: 1,
+  px: 1.5,
+  pt: 1.5,
+  flexShrink: 0,
+  borderTop: `1px solid ${theme.custom.borders.default}`,
+});
+
 export const chatComposerSx: SxProps<Theme> = (theme) => ({
   display: "flex",
   alignItems: "flex-end",
