@@ -12,6 +12,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 
 import { useChatConversation } from "../hooks/useChatConversation";
+import { ChatQuickActions } from "./ChatQuickActions";
 import {
   chatComposerSx,
   chatHeaderSx,
@@ -23,12 +24,15 @@ import {
 } from "../styles/chatStyles";
 
 interface ChatPanelProps {
+  date: string;
+  timeZone: string;
   onClose?: () => void;
 }
 
-export function ChatPanel({ onClose }: ChatPanelProps) {
+export function ChatPanel({ date, timeZone, onClose }: ChatPanelProps) {
   const { t } = useTranslation();
-  const { messages, isPending, sendMessage } = useChatConversation();
+  const { messages, isPending, sendMessage, showDayEvents, findFreeTime } =
+    useChatConversation({ date, timeZone });
   const [draft, setDraft] = useState("");
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -46,7 +50,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     if (!canSend) {
       return;
     }
-    void sendMessage(draft);
+    sendMessage(draft);
     setDraft("");
   }
 
@@ -111,6 +115,12 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           </Box>
         ) : null}
       </Box>
+
+      <ChatQuickActions
+        disabled={isPending}
+        onShowDayEvents={() => void showDayEvents()}
+        onFindFreeTime={(minutes) => void findFreeTime(minutes)}
+      />
 
       <Box
         component="form"
