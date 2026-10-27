@@ -12,6 +12,7 @@ import {
   monthGridDayCardSx,
   monthGridDayContentSx,
   monthGridDayNumberSx,
+  monthGridDaysSx,
   monthGridHeaderCardSx,
   monthGridRowSx,
   monthGridShellSx,
@@ -80,7 +81,7 @@ export function CalendarMonthGrid({
         ))}
       </Box>
 
-      <Box sx={monthGridRowSx}>
+      <Box sx={monthGridDaysSx}>
         {cells.map((day) => {
           const dayKey = formatDateKey(day);
           const isToday = dayKey === todayKey;

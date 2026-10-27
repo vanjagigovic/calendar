@@ -11,6 +11,13 @@ void i18next.use(initReactI18next).init({
         en: {
             translation: {
                 newEvent: 'New event',
+                aiAssistant: 'AI Assistant',
+                chatConversation: 'Conversation',
+                chatWelcome: "Hi! I'm your AI assistant. This is a preview, so my replies are placeholders for now. Ask a question to try it out.",
+                chatPlaceholder: 'Ask a question...',
+                chatMessageLabel: 'Message to AI Assistant',
+                chatSend: 'Send message',
+                chatThinking: 'Assistant is typing',
                 previous: 'previous',
                 next: 'next',
                 today: 'Today',

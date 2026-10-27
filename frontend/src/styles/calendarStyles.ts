@@ -5,16 +5,42 @@ export const calendarPageSx: SxProps<Theme> = (theme) => ({
   maxWidth: "none",
   mx: "auto",
   px: { xs: 0, md: 0 },
-  py: { xs: 3, md: 4 },
-  display: "grid",
-  gap: { xs: 2.5, md: 3.5 },
+  py: { xs: 3, md: 2 },
+  display: "flex",
+  flexDirection: "column",
   minHeight: "100vh",
+  [theme.breakpoints.up("md")]: {
+    height: "100vh",
+    overflow: "hidden",
+    "@supports (height: 100dvh)": { height: "100dvh" },
+  },
   background: `
     radial-gradient(circle at top left, ${theme.custom.layout.pageOverlayPrimary}, ${theme.custom.fills.transparent} 34%),
     radial-gradient(circle at top right, ${theme.custom.layout.pageOverlaySecondary}, ${theme.custom.fills.transparent} 28%),
     linear-gradient(180deg, ${theme.palette.background.default} 0%, ${theme.custom.layout.pageBackground} 100%)
   `,
 });
+
+// Calendar column + reserved right column for the future chat panel (md+).
+export const calendarLayoutSx: SxProps<Theme> = (theme) => ({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  flex: 1,
+  minHeight: 0,
+  gap: { xs: 2.5, md: 2 },
+  [theme.breakpoints.up("md")]: {
+    gridTemplateColumns: "minmax(0, 1fr) clamp(320px, 26vw, 380px)",
+    gridTemplateRows: "minmax(0, 1fr)",
+  },
+});
+
+export const calendarMainSx: SxProps<Theme> = {
+  display: "flex",
+  flexDirection: "column",
+  minWidth: 0,
+  minHeight: 0,
+  gap: { xs: 2.5, md: 2 },
+};
 
 export const calendarToolbarSx: SxProps<Theme> = (theme) => ({
   width: "min(1180px, calc(100% - 32px))",
@@ -114,8 +140,9 @@ export const calendarSurfaceCardSx: SxProps<Theme> = (theme) => ({
 
 export const calendarControlsContentSx: SxProps<Theme> = {
   display: "grid",
-  gap: { xs: 2, md: 2.5 },
-  p: { xs: 2.5, md: 3 },
+  gap: { xs: 2, md: 1.5 },
+  p: { xs: 2.5, md: 2 },
+  "&:last-child": { pb: { xs: 2.5, md: 2 } },
 };
 
 export const calendarRangeLabelSx: SxProps<Theme> = (theme) => ({
@@ -133,7 +160,7 @@ export const calendarHeroSectionSx: SxProps<Theme> = {
 };
 
 export const calendarHeroTitleSx: SxProps<Theme> = (theme) => ({
-  fontSize: { xs: "1.9rem", md: "2.5rem" },
+  fontSize: { xs: "1.9rem", md: "2rem" },
   fontWeight: 700,
   letterSpacing: "-0.04em",
   color: theme.custom.text.accent,
@@ -226,6 +253,8 @@ export const calendarLoadingContentSx: SxProps<Theme> = {
 };
 
 export const timeGridShellSx: SxProps<Theme> = (theme) => ({
+  flex: 1,
+  minHeight: 0,
   overflow: "auto",
   borderRadius: "10px",
   bgcolor: theme.custom.glass.surface.background,
@@ -251,7 +280,12 @@ export const timeGridHeaderRowSx = (
   dayCount: number,
 ): SxProps<Theme> => ({
   ...buildTimeGridColumns(gutterWidth, dayColumnWidth, dayCount),
+  position: "sticky",
+  top: 0,
+  zIndex: 3,
   mb: 1.5,
+  py: 0.5,
+  bgcolor: "background.paper",
 });
 
 export const timeGridBodyRowSx = (
@@ -385,15 +419,28 @@ export const timeGridFocusBlockSx =
   });
 
 export const monthGridShellSx: SxProps<Theme> = {
-  display: "grid",
+  flex: 1,
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
   gap: 1.5,
+  overflow: "auto",
 };
 
 export const monthGridRowSx: SxProps<Theme> = {
   display: "grid",
   gridTemplateColumns: "repeat(7, minmax(72px, 1fr))",
   gap: 1.25,
-  overflowX: "auto",
+  minWidth: 560,
+  flexShrink: 0,
+};
+
+// Auto rows keep their content height; spare height is shared by align-content stretch.
+export const monthGridDaysSx: SxProps<Theme> = {
+  ...monthGridRowSx,
+  flexGrow: 1,
+  gridAutoRows: "auto",
+  alignContent: "stretch",
 };
 
 export const monthGridHeaderCardSx: SxProps<Theme> = (theme) => ({
@@ -413,7 +460,7 @@ export const monthGridDayCardSx =
     isOutsideMonth: boolean,
   ): SxProps<Theme> =>
   (theme) => ({
-    minHeight: { xs: 104, sm: 150 },
+    minHeight: { xs: 104, sm: 112 },
     p: { xs: 1, sm: 1.15 },
     borderRadius: "10px",
     bgcolor: isToday
@@ -480,7 +527,7 @@ export const calendarUpcomingListSx: SxProps<Theme> = (theme) => ({
   display: "grid",
   gap: 0.75,
   width: "100%",
-  maxHeight: 100,
+  maxHeight: { xs: 100, md: 72 },
   overflowY: "auto",
 
   scrollbarWidth: "thin",
