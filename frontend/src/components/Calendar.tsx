@@ -3,18 +3,22 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
+  Dialog,
   Snackbar,
   Skeleton,
   Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 //components
 import { CalendarMonthGrid } from "./CalendarMonthGrid";
 import { CalendarControls } from "./CalendarControls";
 import { CalendarTimeGrid } from "./CalendarTimeGrid";
+import { ChatPanel } from "./ChatPanel";
 import { EventDialog } from "./EventDialog";
 //custom hooks
 import { useCalendarEvents } from "../hooks/useCalendarEvents";
@@ -26,10 +30,13 @@ import {
   getCalendarViewLabels,
 } from "../helpers/calendar-presentation-helpers";
 import {
+  calendarLayoutSx,
   calendarLoadingContentSx,
+  calendarMainSx,
   calendarPageSx,
 } from "../styles/calendarStyles";
 import { successSnackbarAlertSx } from "../styles/alertStyles";
+import { chatMobileOpenButtonSx } from "../styles/chatStyles";
 import {
   eventOccursOnDateInZone,
   formatEventRange,
@@ -48,6 +55,7 @@ export function Calendar() {
   const theme = useTheme();
   // const [now] = useState(() => Date.now());
   const [now] = useState(() => DateTime.utc().toMillis());
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const {
@@ -196,54 +204,84 @@ export function Calendar() {
   return (
     <>
       <Box sx={calendarPageSx}>
-        <CalendarControls
-          isMobile={isMobile}
-          showUpcomingEvents={isViewingToday}
-          currentView={currentView}
-          rangeLabel={rangeLabel}
-          previousLabel={controlText.previuosLabel}
-          todayLabel={controlText.todayLabel}
-          nextLabel={controlText.nextLabel}
-          newEventLabel={headerText.nextEventLabel}
-          viewTimeZoneLabel={headerText.viewTimeZone}
-          upcomingEventsLabel={t("upcomingEventsToday")}
-          noUpcomingEventsLabel={t("noUpcomingEventsToday")}
-          timeZones={timeZones}
-          viewTimeZone={viewTimeZone}
-          viewLabels={viewLabels}
-          upcomingEvents={upcomingEvents}
-          onPrevious={goPrevious}
-          onToday={goToday}
-          onNext={goNext}
-          onCreateEvent={() => openCreateDialog()}
-          onViewTimeZoneChange={setViewTimeZone}
-          onChangeView={setCurrentView}
-        />
+        <Box sx={calendarLayoutSx}>
+          <Box sx={calendarMainSx}>
+            <CalendarControls
+              isMobile={isMobile}
+              showUpcomingEvents={isViewingToday}
+              currentView={currentView}
+              rangeLabel={rangeLabel}
+              previousLabel={controlText.previuosLabel}
+              todayLabel={controlText.todayLabel}
+              nextLabel={controlText.nextLabel}
+              newEventLabel={headerText.nextEventLabel}
+              viewTimeZoneLabel={headerText.viewTimeZone}
+              upcomingEventsLabel={t("upcomingEventsToday")}
+              noUpcomingEventsLabel={t("noUpcomingEventsToday")}
+              timeZones={timeZones}
+              viewTimeZone={viewTimeZone}
+              viewLabels={viewLabels}
+              upcomingEvents={upcomingEvents}
+              onPrevious={goPrevious}
+              onToday={goToday}
+              onNext={goNext}
+              onCreateEvent={() => openCreateDialog()}
+              onViewTimeZoneChange={setViewTimeZone}
+              onChangeView={setCurrentView}
+            />
 
-        {error ? <Alert severity="error">{error}</Alert> : null}
+            {isTablet ? (
+              <Button
+                variant="outlined"
+                startIcon={<AutoAwesomeIcon />}
+                sx={chatMobileOpenButtonSx}
+                onClick={() => setIsChatOpen(true)}
+              >
+                {t("aiAssistant")}
+              </Button>
+            ) : null}
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            style={{
-              flex: 1,
-              minHeight: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-            key={`${currentView}-${rangeLabel}`}
-          >
-            <Box
-              sx={{
-                flex: 1,
-                minHeight: 0,
-                display: "flex",
-                flexDirection: "column",
-              }}
+            {error ? <Alert severity="error">{error}</Alert> : null}
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+                key={`${currentView}-${rangeLabel}`}
+              >
+                <Box
+                  sx={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {renderContent()}
+                </Box>
+              </motion.div>
+            </AnimatePresence>
+          </Box>
+          {isTablet ? (
+            <Dialog
+              fullScreen
+              keepMounted
+              open={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              aria-label={t("aiAssistant")}
             >
-              {renderContent()}
-            </Box>
-          </motion.div>
-        </AnimatePresence>
+              <Box sx={{ height: "100%", p: 1 }}>
+                <ChatPanel onClose={() => setIsChatOpen(false)} />
+              </Box>
+            </Dialog>
+          ) : (
+            <ChatPanel />
+          )}
+        </Box>
       </Box>
 
       {modalState?.mode === "create" ? (
