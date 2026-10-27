@@ -10,7 +10,9 @@ import {
 } from "@mui/material";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthProvider";
 import {
@@ -23,6 +25,8 @@ import {
 export function UserAccountMenu() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [anchorElement, setAnchorElement] = useState<null | HTMLElement>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -32,6 +36,11 @@ export function UserAccountMenu() {
 
   const handleClose = () => {
     setAnchorElement(null);
+  };
+
+  const handleOpenProfile = () => {
+    handleClose();
+    navigate("/profile");
   };
 
   const handleLogout = async () => {
@@ -78,6 +87,14 @@ export function UserAccountMenu() {
           </ListItemIcon>
           <ListItemText>{user?.email ?? t("account")}</ListItemText>
         </MenuItem>
+
+        <MenuItem onClick={handleOpenProfile}>
+          <ListItemIcon>
+            <PersonOutlineIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("myProfile")}</ListItemText>
+        </MenuItem>
+
         <MenuItem onClick={() => void handleLogout()} disabled={loggingOut}>
           <ListItemIcon>
             <LogoutOutlinedIcon fontSize="small" />

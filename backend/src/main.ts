@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import 'dotenv/config';
 import 'reflect-metadata';
@@ -46,6 +45,7 @@ async function startApp() {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     securityHeaders(request, response, next);
   });
 

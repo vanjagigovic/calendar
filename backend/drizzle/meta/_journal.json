@@ -57,6 +57,13 @@
       "when": 1787915579063,
       "tag": "0007_greedy_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793106158722,
+      "tag": "0008_wooden_retro_girl",
+      "breakpoints": true
     }
   ]
 }

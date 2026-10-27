@@ -21,6 +21,24 @@ export const usersTable = pgTable('users', {
     .notNull(),
 });
 
+export const userProfilesTable = pgTable('user_profiles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => usersTable.id, { onDelete: 'cascade' }),
+  profession: text('profession'),
+  interests: text('interests')
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
+  responseStyle: text('response_style').notNull().default('balanced'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const sessionsTable = pgTable(
   'sessions',
   {
@@ -80,9 +98,13 @@ export const eventsTable = pgTable(
   }),
 );
 
-export const usersRelations = relations(usersTable, ({ many }) => ({
+export const usersRelations = relations(usersTable, ({ many, one }) => ({
   events: many(eventsTable),
   sessions: many(sessionsTable),
+  profile: one(userProfilesTable, {
+    fields: [usersTable.id],
+    references: [userProfilesTable.userId],
+  }),
 }));
 
 export const sessionsRelations = relations(sessionsTable, ({ one }) => ({
@@ -105,3 +127,5 @@ export type UserRecord = typeof usersTable.$inferSelect;
 export type NewUserRecord = typeof usersTable.$inferInsert;
 export type SessionRecord = typeof sessionsTable.$inferSelect;
 export type NewSessionRecord = typeof sessionsTable.$inferInsert;
+export type UserProfileRecord = typeof userProfilesTable.$inferSelect;
+export type NewUserProfileRecord = typeof userProfilesTable.$inferInsert;
