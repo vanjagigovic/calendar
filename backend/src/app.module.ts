@@ -6,9 +6,16 @@ import { AuthController } from './auth/auth.controller';
 import { OriginValidationMiddleware } from './common/middleware/origin-validation.middleware';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 import { ProfileModule } from './profile/profile.module';
+import { AssistantModule } from './assistant/assistant.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), AuthModule, EventsModule, ProfileModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    AuthModule,
+    EventsModule,
+    ProfileModule,
+    AssistantModule,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
