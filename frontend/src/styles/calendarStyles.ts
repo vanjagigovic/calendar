@@ -332,16 +332,25 @@ export const currentTimeIndicatorDotSx: SxProps<Theme> = (theme) => ({
 });
 
 export const timeGridDayHeaderCardSx =
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (isToday: boolean, _isSelected: boolean): SxProps<Theme> =>
+  (isToday: boolean, isSelected: boolean): SxProps<Theme> =>
     (theme) => ({
       p: { xs: 1, sm: 1.35 },
       textAlign: "center",
+      cursor: "pointer",
       borderRadius: "10px",
       border: "1px solid",
-      bgcolor: theme.custom.fills.selectedSoft,
+      bgcolor: isSelected
+        ? theme.custom.fills.selectedSoft
+        : theme.custom.glass.surface.background,
       color: theme.palette.primary.main,
-      borderColor: theme.palette.primary.main,
+      borderColor: isSelected
+        ? theme.palette.primary.main
+        : theme.custom.borders.subtle,
+      outline: isSelected ? `2px solid ${theme.palette.primary.main}` : "none",
+      outlineOffset: -1,
+      "&:focus-visible": {
+        outline: `2px solid ${theme.palette.primary.main}`,
+      },
       boxShadow: isToday
         ? `${theme.custom.shadows.focusRingStrong}, ${theme.custom.shadows.medium}`
         : theme.custom.shadows.medium,
@@ -468,22 +477,42 @@ export const monthGridDayCardSx =
       : isSelected
         ? theme.custom.gradients.selectedDaySurface
         : theme.custom.glass.surface.background,
-    borderColor: isToday
-      ? theme.custom.borders.strong
-      : theme.custom.borders.subtle,
-    boxShadow: isToday
-      ? `${theme.custom.shadows.focusRing}, ${theme.custom.glass.surface.shadow}`
-      : theme.custom.glass.surface.shadow,
+    borderColor: isSelected
+      ? theme.palette.primary.main
+      : isToday
+        ? theme.custom.borders.strong
+        : theme.custom.borders.subtle,
+    // Inset ring marks the selected day; today's outer glow stays separate.
+    boxShadow: monthDayShadow(
+      theme,
+      isSelected,
+      isToday
+        ? `${theme.custom.shadows.focusRing}, ${theme.custom.glass.surface.shadow}`
+        : theme.custom.glass.surface.shadow,
+    ),
     opacity: isOutsideMonth ? 0.58 : 1,
+    cursor: "pointer",
     transition:
       "transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease",
     "&:hover": {
       transform: "translateY(-2px)",
-      boxShadow: theme.custom.shadows.medium,
+      boxShadow: monthDayShadow(theme, isSelected, theme.custom.shadows.medium),
       background: theme.custom.fills.sectionSoft,
-      borderColor: theme.custom.borders.strong,
+      borderColor: isSelected
+        ? theme.palette.primary.main
+        : theme.custom.borders.strong,
     },
   });
+
+function monthDayShadow(
+  theme: Theme,
+  isSelected: boolean,
+  baseShadow: string,
+): string {
+  return isSelected
+    ? `inset 0 0 0 2px ${theme.palette.primary.main}, ${baseShadow}`
+    : baseShadow;
+}
 
 export const monthGridDayContentSx: SxProps<Theme> = {
   mt: 1.25,

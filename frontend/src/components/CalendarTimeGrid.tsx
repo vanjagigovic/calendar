@@ -26,6 +26,7 @@ import { CalendarTimeIndicator } from './CalendarTimeIndicator';
 
 interface CalendarTimeGridProps {
   days: Date[];
+  selectedDayKey: string;
   events: CalendarEvent[];
   viewTimeZone: string;
   isMobile: boolean;
@@ -35,11 +36,14 @@ interface CalendarTimeGridProps {
   slotsPerDay: number;
   hoursPerDay: number;
   onOpenCreateForSlot: (startUtc: string) => void;
+  onSelectDay: (day: Date) => void;
   onEditEvent: (event: CalendarEvent) => void;
 }
 
 export function CalendarTimeGrid({
   days,
+  selectedDayKey,
+  onSelectDay,
   events,
   viewTimeZone,
   isMobile,
@@ -71,10 +75,6 @@ export function CalendarTimeGrid({
 
   const todayKey = formatDateKey(new Date());
 
-  const selectedDayKey = formatDateKey(
-    DateTime.now().setZone(viewTimeZone).toJSDate()
-  );
-
   const headerRowSx = timeGridHeaderRowSx(
     gutterWidth,
     dayColumnWidth,
@@ -100,6 +100,16 @@ export function CalendarTimeGrid({
               formatDateKey(day) === todayKey,
               formatDateKey(day) === selectedDayKey
             )}
+            role="button"
+            tabIndex={0}
+            aria-pressed={formatDateKey(day) === selectedDayKey}
+            onClick={() => onSelectDay(day)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSelectDay(day);
+              }
+            }}
           >
             <Typography
               variant={
@@ -158,6 +168,7 @@ export function CalendarTimeGrid({
             {Array.from({ length: slotsPerDay }, (_, slotIndex) => (
               <Box
                 key={`${formatDateKey(day)}-${slotIndex}`}
+                data-testid={`slot-${formatDateKey(day)}-${slotIndex}`}
                 onClick={() =>
                   onOpenCreateForSlot(
                     getSlotStartUtc(

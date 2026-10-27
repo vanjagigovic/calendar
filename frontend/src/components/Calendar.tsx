@@ -39,6 +39,7 @@ import { successSnackbarAlertSx } from "../styles/alertStyles";
 import { chatMobileOpenButtonSx } from "../styles/chatStyles";
 import {
   eventOccursOnDateInZone,
+  formatDateKey,
   formatEventRange,
 } from "../utils/calendar-utils";
 import { DateTime } from "luxon";
@@ -71,7 +72,6 @@ export function Calendar() {
     goToday,
     openCreateDialog,
     openCreateForSlot,
-    openCreateForDay,
     openEditDialog,
     closeModal,
   } = useCalendarUiState();
@@ -105,6 +105,24 @@ export function Calendar() {
     onToday: goToday,
   });
 
+  // The assistant's day follows navigation/view changes until the user picks a day.
+  const displayedDayKey = formatDateKey(currentDate);
+  const [selection, setSelection] = useState({
+    anchor: `${currentView}|${displayedDayKey}`,
+    dayKey: displayedDayKey,
+  });
+  const selectedDayKey =
+    selection.anchor === `${currentView}|${displayedDayKey}`
+      ? selection.dayKey
+      : displayedDayKey;
+
+  function selectDay(day: Date) {
+    setSelection({
+      anchor: `${currentView}|${displayedDayKey}`,
+      dayKey: formatDateKey(day),
+    });
+  }
+
   const headerText = {
     nextEventLabel: t("newEvent"),
     viewTimeZone: t("viewTimeZone"),
@@ -113,6 +131,8 @@ export function Calendar() {
   const controlText = getCalendarControlText(t);
   const viewLabels = getCalendarViewLabels(t);
   const todayInZone = DateTime.now().setZone(viewTimeZone);
+  // The route date is a calendar-day key; the assistant resolves it in viewTimeZone.
+  const chatDate = selectedDayKey;
   const isViewingToday = (() => {
     if (currentView === "day") {
       return DateTime.fromJSDate(currentDate)
@@ -173,6 +193,7 @@ export function Calendar() {
     return (
       <CalendarTimeGrid
         days={days}
+        selectedDayKey={selectedDayKey}
         events={events}
         viewTimeZone={viewTimeZone}
         isMobile={isMobile}
@@ -182,6 +203,7 @@ export function Calendar() {
         slotsPerDay={SLOTS_PER_DAY}
         hoursPerDay={HOURS_PER_DAY}
         onOpenCreateForSlot={openCreateForSlot}
+        onSelectDay={selectDay}
         onEditEvent={openEditDialog}
       />
     );
@@ -192,10 +214,11 @@ export function Calendar() {
       <CalendarMonthGrid
         cells={monthCells}
         currentDate={currentDate}
+        selectedDayKey={selectedDayKey}
         events={events}
         viewTimeZone={viewTimeZone}
         isMobile={isMobile}
-        onOpenCreateForDay={openCreateForDay}
+        onSelectDay={selectDay}
         onEditEvent={openEditDialog}
       />
     );
@@ -275,11 +298,15 @@ export function Calendar() {
               aria-label={t("aiAssistant")}
             >
               <Box sx={{ height: "100%", p: 1 }}>
-                <ChatPanel onClose={() => setIsChatOpen(false)} />
+                <ChatPanel
+                  date={chatDate}
+                  timeZone={viewTimeZone}
+                  onClose={() => setIsChatOpen(false)}
+                />
               </Box>
             </Dialog>
           ) : (
-            <ChatPanel />
+            <ChatPanel date={chatDate} timeZone={viewTimeZone} />
           )}
         </Box>
       </Box>
