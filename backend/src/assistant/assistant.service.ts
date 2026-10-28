@@ -426,7 +426,10 @@ export class AssistantService {
     }
 
     const profile = await this.profileService.findOne(userId);
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({
+      apiKey,
+      timeout: 30_000,
+    });
 
     // Earlier fixed refusals reflect the interests at that time; keeping them
     // makes the models repeat a refusal after the profile has been updated.

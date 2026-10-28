@@ -719,6 +719,31 @@ describe('AssistantService.chat', () => {
     jest.clearAllMocks();
   });
 
+  it('configures a 30-second timeout for the OpenAI client', async () => {
+    const create = createWithScope('out_of_scope');
+    mockOpenAI(create);
+
+    const { service } = createService();
+
+    await service.chat('user-1', 'Hello', 'UTC');
+
+    const openAIModule: unknown = jest.requireMock('openai');
+
+    if (
+      typeof openAIModule !== 'object' ||
+      openAIModule === null ||
+      !('default' in openAIModule) ||
+      typeof openAIModule.default !== 'function' ||
+      !jest.isMockFunction(openAIModule.default)
+    ) {
+      throw new Error('OpenAI constructor mock is not configured.');
+    }
+
+    expect(openAIModule.default).toHaveBeenCalledWith({
+      apiKey: 'test-api-key',
+      timeout: 30_000,
+    });
+  });
   it('returns the assistant text response without calling tools', async () => {
     const create = createWithScope();
     create.mockResolvedValueOnce({
