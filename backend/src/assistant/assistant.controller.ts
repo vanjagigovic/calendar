@@ -18,6 +18,8 @@ import { DayEventsQueryDto } from './dto/day-events-query.dto';
 import { FreeSlotQueryDto } from './dto/free-slot-query.dto';
 import { FreeSlotResponseDto } from './dto/free-slot-response.dto';
 import { ChatRequestDto } from './dto/chat-request.dto';
+import { Throttle } from '@nestjs/throttler';
+import { AssistantRateLimitGuard } from './guards/assistant-rate-limit.guard';
 
 @ApiTags('Assistant')
 @Controller('assistant')
@@ -27,6 +29,8 @@ export class AssistantController {
   constructor(private readonly assistantService: AssistantService) {}
 
   @Post('chat')
+  @UseGuards(AssistantRateLimitGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Send a free-text message to the assistant',
   })
