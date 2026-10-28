@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, parse } from 'node:path';
-import { KNOWLEDGE_CATEGORIES, KnowledgeDocument } from './knowledge.types';
+import {
+  KNOWLEDGE_CATEGORIES,
+  KnowledgeDocument,
+} from '../knowledge/knowledge.types';
 
 @Injectable()
 export class KnowledgeRepository implements OnModuleInit {
