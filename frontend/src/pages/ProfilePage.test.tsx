@@ -72,14 +72,9 @@ describe('ProfilePage', () => {
     renderProfilePage();
 
     await user.clear(await screen.findByRole('textbox', { name: 'Profession' }));
-    await user.type(
-      screen.getByRole('textbox', { name: 'Profession' }),
-      'Developer',
-    );
-    await user.type(
-      screen.getByRole('textbox', { name: 'Add interest' }),
-      'AI',
-    );
+    await user.paste('Developer');
+    await user.click(screen.getByRole('textbox', { name: 'Add interest' }));
+    await user.paste('AI');
     await user.click(screen.getByRole('button', { name: 'Add' }));
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Response style' }));
