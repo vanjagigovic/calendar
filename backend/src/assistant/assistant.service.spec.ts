@@ -407,7 +407,9 @@ describe('AssistantService.chat', () => {
     it('passes retrieved knowledge passages to the answer model as reference context', async () => {
       const create = createWithScope('in_scope');
       create.mockResolvedValueOnce(
-        textResponse('Protect focus time by blocking calendar hours for deep work.'),
+        textResponse(
+          'Protect focus time by blocking calendar hours for deep work.',
+        ),
       );
       mockOpenAI(create);
       const ctx = createService();
@@ -424,11 +426,7 @@ describe('AssistantService.chat', () => {
         ],
       });
 
-      await ctx.service.chat(
-        'user-1',
-        'How can I protect focus time?',
-        'UTC',
-      );
+      await ctx.service.chat('user-1', 'How can I protect focus time?', 'UTC');
 
       expect(ctx.search).toHaveBeenCalledWith('How can I protect focus time?');
       const answerRequest = create.mock.calls[1]?.[0] as unknown as {
