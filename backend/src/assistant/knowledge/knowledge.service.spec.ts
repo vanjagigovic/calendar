@@ -57,7 +57,7 @@ describe('KnowledgeService', () => {
     const result = service.search('focus blocking calendar');
 
     expect(result.passages[0].sourceId).toBe(
-      'productivity/focus-time-policy#1',
+      'productivity-focus-time-policy#1',
     );
   });
 

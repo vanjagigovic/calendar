@@ -22,6 +22,7 @@ export class KnowledgeService {
       .flatMap((document) =>
         this.splitIntoPassages(
           document.id,
+          document.sourceId,
           document.category,
           document.title,
           document.content,
@@ -43,6 +44,7 @@ export class KnowledgeService {
 
   private splitIntoPassages(
     documentId: string,
+    sourceId: string,
     category: KnowledgeCategory,
     title: string,
     content: string,
@@ -65,7 +67,7 @@ export class KnowledgeService {
     }
 
     return groupedBlocks.map((passageContent, index) => ({
-      sourceId: `${documentId}#${index + 1}`,
+      sourceId: `${sourceId}#${index + 1}`,
       documentId,
       category,
       title,
