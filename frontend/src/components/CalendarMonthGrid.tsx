@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { CalendarEventChip } from "./CalendarEventChip";
 import {
   eventOccursOnDateInZone,
-  formatDateKey,
+  formatZonedDateKey,
 } from "../utils/calendar-utils";
 
 import {
@@ -51,7 +51,7 @@ export function CalendarMonthGrid({
   onSelectDay,
   onEditEvent,
 }: CalendarMonthGridProps) {
-  const todayKey = formatDateKey(new Date());
+  const todayKey = formatZonedDateKey(new Date(), viewTimeZone);
 
   /**
    * Pre-group events by day (performance boost)
@@ -60,7 +60,7 @@ export function CalendarMonthGrid({
     const map: Record<string, CalendarEvent[]> = {};
 
     for (const day of cells) {
-      const key = formatDateKey(day);
+      const key = formatZonedDateKey(day, viewTimeZone);
 
       map[key] = events.filter((event) =>
         eventOccursOnDateInZone(event, day, viewTimeZone),
@@ -84,10 +84,12 @@ export function CalendarMonthGrid({
 
       <Box sx={monthGridDaysSx}>
         {cells.map((day) => {
-          const dayKey = formatDateKey(day);
+          const dayKey = formatZonedDateKey(day, viewTimeZone);
           const isToday = dayKey === todayKey;
           const isSelected = dayKey === selectedDayKey;
-          const isOutsideMonth = day.getMonth() !== currentDate.getMonth();
+          const isOutsideMonth =
+            DateTime.fromJSDate(day).setZone(viewTimeZone).month !==
+            currentDate.getMonth() + 1;
 
           const dayEvents = eventsByDay[dayKey] ?? [];
 

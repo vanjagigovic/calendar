@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findFreeSlot, getDayEvents } from "./assistant-api";
+import { findFreeSlot, getDayEvents, sendChatMessage } from "./assistant-api";
 import {
   buildDayEventsPath,
   buildFreeSlotPath,
@@ -45,5 +45,41 @@ describe("assistant api", () => {
       2,
       expect.stringContaining("/assistant/free-slot?windowStartUtc="),
     );
+  });
+
+  it("sends a free-text message to the chat endpoint", async () => {
+  vi.mocked(apiRequest).mockResolvedValue({ answer: "Hello!" });
+
+  const response = await sendChatMessage("Hello", "UTC", "2026-10-25");
+
+  expect(apiRequest).toHaveBeenCalledWith("/assistant/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      message: "Hello",
+      timeZone: "UTC",
+      selectedDate: "2026-10-25",
+      history: [],
+    }),
+  });
+
+  expect(response).toEqual({ answer: "Hello!" });
+});
+
+  it("sends recent conversation history with the chat request", async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ answer: "ok" });
+
+    await sendChatMessage("gym", "UTC", "2026-10-25", [
+      { role: "user", content: "Which workout is best?" },
+    ]);
+
+    expect(apiRequest).toHaveBeenCalledWith("/assistant/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        message: "gym",
+        timeZone: "UTC",
+        selectedDate: "2026-10-25",
+        history: [{ role: "user", content: "Which workout is best?" }],
+      }),
+    });
   });
 });

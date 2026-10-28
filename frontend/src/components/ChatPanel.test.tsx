@@ -5,12 +5,13 @@ import { ThemeProvider } from "@mui/material";
 import "../config/i18n";
 import { ChatPanel } from "./ChatPanel";
 import { appTheme } from "../theme/theme";
-import { findFreeSlot, getDayEvents } from "../api/assistant-api";
+import { findFreeSlot, getDayEvents, sendChatMessage} from "../api/assistant-api";
 import { ApiError } from "../api/api-client";
 
 vi.mock("../api/assistant-api", () => ({
   getDayEvents: vi.fn(),
   findFreeSlot: vi.fn(),
+  sendChatMessage: vi.fn(),
 }));
 
 const DATE = "2099-08-26";
@@ -45,18 +46,60 @@ describe("ChatPanel", () => {
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
   });
 
-  it("replies to free text with the fixed hint and never calls the API", () => {
+ it("sends free text to the API and displays the assistant response", async () => {
+  vi.mocked(sendChatMessage).mockResolvedValue({
+    answer: "Your day looks manageable!",
+  });
+
+  renderPanel();
+  const input = screen.getByLabelText("Message to AI Assistant");
+
+  fireEvent.change(input, { target: { value: "What is my day like?" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+
+  expect(screen.getByText("What is my day like?")).toBeInTheDocument();
+  expect(input).toHaveValue("");
+
+  expect(
+    await screen.findByText("Your day looks manageable!"),
+  ).toBeInTheDocument();
+
+  expect(sendChatMessage).toHaveBeenCalledWith(
+    "What is my day like?",
+    ZONE,
+    DATE,
+    [],
+  );
+  expect(getDayEvents).not.toHaveBeenCalled();
+  expect(findFreeSlot).not.toHaveBeenCalled();
+});
+
+  it("sends earlier messages as history for follow-ups, excluding the new message", async () => {
+    vi.mocked(sendChatMessage)
+      .mockResolvedValueOnce({ answer: "What are your goals?" })
+      .mockResolvedValueOnce({ answer: "What would you like at the gym?" });
+
     renderPanel();
     const input = screen.getByLabelText("Message to AI Assistant");
 
-    fireEvent.change(input, { target: { value: "What is my day like?" } });
+    fireEvent.change(input, { target: { value: "Which workout is best?" } });
     fireEvent.keyDown(input, { key: "Enter" });
+    await screen.findByText("What are your goals?");
 
-    expect(screen.getByText("What is my day like?")).toBeInTheDocument();
-    expect(screen.getByText(/can't answer typed questions/)).toBeInTheDocument();
-    expect(input).toHaveValue("");
-    expect(getDayEvents).not.toHaveBeenCalled();
-    expect(findFreeSlot).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: "gym" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await screen.findByText("What would you like at the gym?");
+
+    expect(sendChatMessage).toHaveBeenNthCalledWith(
+      2,
+      "gym",
+      ZONE,
+      DATE,
+      [
+        { role: "user", content: "Which workout is best?" },
+        { role: "assistant", content: "What are your goals?" },
+      ],
+    );
   });
 
   it("does not submit on Shift+Enter", () => {
@@ -66,7 +109,7 @@ describe("ChatPanel", () => {
     fireEvent.change(input, { target: { value: "Hello" } });
     fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
 
-    expect(screen.queryByText(/can't answer typed questions/)).toBeNull();
+    expect(sendChatMessage).not.toHaveBeenCalled();
     expect(input).toHaveValue("Hello");
   });
 

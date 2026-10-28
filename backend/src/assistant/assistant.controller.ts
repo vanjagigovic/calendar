@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Body, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -17,6 +17,7 @@ import { AssistantService } from './assistant.service';
 import { DayEventsQueryDto } from './dto/day-events-query.dto';
 import { FreeSlotQueryDto } from './dto/free-slot-query.dto';
 import { FreeSlotResponseDto } from './dto/free-slot-response.dto';
+import { ChatRequestDto } from './dto/chat-request.dto';
 
 @ApiTags('Assistant')
 @Controller('assistant')
@@ -24,6 +25,31 @@ import { FreeSlotResponseDto } from './dto/free-slot-response.dto';
 @ApiBearerAuth('JWT-auth')
 export class AssistantController {
   constructor(private readonly assistantService: AssistantService) {}
+
+  @Post('chat')
+  @ApiOperation({
+    summary: 'Send a free-text message to the assistant',
+  })
+  @ApiOkResponse({
+    description: 'The assistant response.',
+  })
+  @ApiBadRequestResponse({
+    description: 'The message is invalid.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Authentication is required.',
+    type: ApiErrorResponseDto,
+  })
+  chat(@Body() dto: ChatRequestDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.assistantService.chat(
+      user.id,
+      dto.message,
+      dto.timeZone,
+      dto.selectedDate,
+      dto.history,
+    );
+  }
 
   @Get('day-events')
   @ApiOperation({

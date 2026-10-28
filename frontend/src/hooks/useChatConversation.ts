@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { findFreeSlot, getDayEvents } from "../api/assistant-api";
+import { findFreeSlot, getDayEvents, sendChatMessage } from "../api/assistant-api";
 import { createChatMessage, type ChatMessage } from "../helpers/chat-helpers";
 import {
   buildFreeSlotWindow,
@@ -10,6 +10,9 @@ import {
   formatFreeSlotMessage,
 } from "../helpers/chat-format-helpers";
 import { getErrorMessage } from "../helpers/client-state-helpers";
+
+const MAX_HISTORY_MESSAGES = 10;
+const MAX_HISTORY_CONTENT_LENGTH = 1000;
 
 interface UseChatConversationOptions {
   date: string;
@@ -24,7 +27,13 @@ export function useChatConversation({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isPending, setIsPending] = useState(false);
   const pendingRef = useRef(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
   const mountedRef = useRef(true);
+
+  // The history sent to the backend must exclude the message being sent.
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -84,10 +93,18 @@ export function useChatConversation({
         return;
       }
 
-      appendMessage("user", content);
-      appendMessage("assistant", t("chatFreeTextHint"));
+      void runAction(content, async () => {
+        const history = messagesRef.current
+          .slice(-MAX_HISTORY_MESSAGES)
+          .map(({ role, content: text }) => ({
+            role,
+            content: text.slice(0, MAX_HISTORY_CONTENT_LENGTH),
+          }));
+        const response = await sendChatMessage(content, timeZone, date, history);
+        return response.answer;
+      });
     },
-    [appendMessage, t],
+    [date, runAction, timeZone],
   );
 
   const showDayEvents = useCallback(

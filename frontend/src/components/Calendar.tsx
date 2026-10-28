@@ -40,6 +40,7 @@ import { chatMobileOpenButtonSx } from "../styles/chatStyles";
 import {
   eventOccursOnDateInZone,
   formatDateKey,
+  formatZonedDateKey,
   formatEventRange,
 } from "../utils/calendar-utils";
 import { DateTime } from "luxon";
@@ -119,7 +120,11 @@ export function Calendar() {
   function selectDay(day: Date) {
     setSelection({
       anchor: `${currentView}|${displayedDayKey}`,
-      dayKey: formatDateKey(day),
+      // Month/week cells are midnights in viewTimeZone; the day view date is the route date.
+      dayKey:
+        currentView === "day"
+          ? formatDateKey(day)
+          : formatZonedDateKey(day, viewTimeZone),
     });
   }
 

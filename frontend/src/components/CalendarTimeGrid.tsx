@@ -6,6 +6,7 @@ import { CalendarEventCard } from './CalendarEventCard';
 import {
   eventOccursOnDateInZone,
   formatDateKey,
+  formatZonedDateKey,
   getEventBlockMetrics,
   getSlotStartUtc,
 } from '../utils/calendar-utils';
@@ -73,7 +74,12 @@ export function CalendarTimeGrid({
 
   const eventPadding = isMobile ? 0.5 : 0.75;
 
-  const todayKey = formatDateKey(new Date());
+  // Week days are midnights in viewTimeZone; the day view date is the route's local date.
+  const keyOf = (day: Date) =>
+    isWeekView
+      ? formatZonedDateKey(day, viewTimeZone)
+      : formatDateKey(day);
+  const todayKey = keyOf(new Date());
 
   const headerRowSx = timeGridHeaderRowSx(
     gutterWidth,
@@ -94,15 +100,15 @@ export function CalendarTimeGrid({
 
         {days.map((day) => (
           <Card
-            key={formatDateKey(day)}
+            key={keyOf(day)}
             variant="outlined"
             sx={timeGridDayHeaderCardSx(
-              formatDateKey(day) === todayKey,
-              formatDateKey(day) === selectedDayKey
+              keyOf(day) === todayKey,
+              keyOf(day) === selectedDayKey
             )}
             role="button"
             tabIndex={0}
-            aria-pressed={formatDateKey(day) === selectedDayKey}
+            aria-pressed={keyOf(day) === selectedDayKey}
             onClick={() => onSelectDay(day)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -156,19 +162,19 @@ export function CalendarTimeGrid({
 
         {days.map((day) => (
           <Box
-            key={formatDateKey(day)}
+            key={keyOf(day)}
             sx={timeGridDayColumnSx(
               dayColumnWidth,
               slotHeight,
               slotsPerDay,
-              formatDateKey(day) === todayKey,
-              formatDateKey(day) === selectedDayKey
+              keyOf(day) === todayKey,
+              keyOf(day) === selectedDayKey
             )}
           >
             {Array.from({ length: slotsPerDay }, (_, slotIndex) => (
               <Box
-                key={`${formatDateKey(day)}-${slotIndex}`}
-                data-testid={`slot-${formatDateKey(day)}-${slotIndex}`}
+                key={`${keyOf(day)}-${slotIndex}`}
+                data-testid={`slot-${keyOf(day)}-${slotIndex}`}
                 onClick={() =>
                   onOpenCreateForSlot(
                     getSlotStartUtc(

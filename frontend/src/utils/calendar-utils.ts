@@ -144,8 +144,13 @@ export function formatDateKey(date: Date): string {
   ).padStart(2, "0")}`;
 }
 
-function calendarDateKey(date: Date, timeZone: string): string {
+// Calendar date (YYYY-MM-DD) of an instant as seen in `timeZone`.
+export function formatZonedDateKey(date: Date, timeZone: string): string {
   return DateTime.fromJSDate(date).setZone(timeZone).toFormat('yyyy-LL-dd');
+}
+
+function calendarDateKey(date: Date, timeZone: string): string {
+  return formatZonedDateKey(date, timeZone);
 }
 
 export function toLocalInputValue(date: Date): string {
