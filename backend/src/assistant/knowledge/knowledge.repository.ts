@@ -5,7 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { readdir, readFile } from 'node:fs/promises';
-import { join, parse } from 'node:path';
+import { join } from 'node:path';
 import { KNOWLEDGE_CATEGORIES, KnowledgeDocument } from './knowledge.types';
 
 @Injectable()
@@ -28,6 +28,54 @@ export class KnowledgeRepository implements OnModuleInit {
     return document ? { ...document } : undefined;
   }
 
+  private parseDocument(
+    file: string,
+    category: KnowledgeDocument['category'],
+    rawContent: string,
+  ): KnowledgeDocument {
+    const match = rawContent.match(
+      /^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)([\s\S]*)$/,
+    );
+
+    if (!match) {
+      throw new Error(`Knowledge document "${file}" has invalid frontmatter`);
+    }
+
+    const [, frontmatter, body] = match;
+    const metadata = Object.fromEntries(
+      frontmatter.split(/\r?\n/).map((line) => {
+        const separatorIndex = line.indexOf(':');
+
+        if (separatorIndex === -1) {
+          throw new Error(`Knowledge document "${file}" has invalid metadata`);
+        }
+
+        return [
+          line.slice(0, separatorIndex).trim(),
+          line.slice(separatorIndex + 1).trim(),
+        ];
+      }),
+    );
+
+    const { sourceId, organization, title } = metadata;
+    const content = body.trim();
+
+    if (!sourceId || !organization || !title || !content) {
+      throw new Error(
+        `Knowledge document "${file}" is missing required metadata or content`,
+      );
+    }
+
+    return {
+      id: `${category}/${file.replace(/\.md$/, '')}`,
+      sourceId,
+      organization,
+      category,
+      title,
+      content,
+    };
+  }
+
   private async loadDocuments(): Promise<void> {
     const loaded: KnowledgeDocument[] = [];
 
@@ -40,23 +88,12 @@ export class KnowledgeRepository implements OnModuleInit {
           .sort();
 
         for (const file of files) {
-          const content = (
-            await readFile(join(categoryDirectory, file), 'utf8')
-          ).trim();
+          const rawContent = await readFile(
+            join(categoryDirectory, file),
+            'utf8',
+          );
 
-          if (!content) {
-            throw new Error(`Knowledge document "${file}" is empty`);
-          }
-
-          const filename = parse(file).name;
-          const heading = content.match(/^#\s+(.+)$/m);
-
-          loaded.push({
-            id: `${category}/${filename}`,
-            category: category,
-            title: heading?.[1]?.trim() ?? filename,
-            content,
-          });
+          loaded.push(this.parseDocument(file, category, rawContent));
         }
       }
     } catch (error) {

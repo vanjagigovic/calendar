@@ -8,6 +8,8 @@ export type KnowledgeCategory = (typeof KNOWLEDGE_CATEGORIES)[number];
 
 export interface KnowledgeDocument {
   id: string;
+  sourceId: string;
+  organization: string;
   category: KnowledgeCategory;
   title: string;
   content: string;
