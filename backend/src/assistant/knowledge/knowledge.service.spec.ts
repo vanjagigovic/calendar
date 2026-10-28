@@ -13,6 +13,8 @@ describe('KnowledgeService', () => {
         '# Focus Time Policy\n\n' +
         'Protect focus time by blocking calendar hours for deep work.\n\n' +
         'Use calendar blocks to reduce interruptions.',
+      sourceId: 'productivity-focus-time-policy',
+      organization: 'Productivity',
     },
     {
       id: 'productivity/meeting-guidelines',
@@ -21,6 +23,8 @@ describe('KnowledgeService', () => {
       content:
         '# Meeting Guidelines\n\n' +
         'Schedule meetings in the calendar when necessary.',
+      sourceId: 'productivity-meeting-guidelines',
+      organization: 'Productivity',
     },
   ];
 
