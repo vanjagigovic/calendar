@@ -3,6 +3,49 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { DayEventsQueryDto } from './day-events-query.dto';
 import { FreeSlotQueryDto } from './free-slot-query.dto';
+import { ChatRequestDto } from './chat-request.dto';
+
+describe('ChatRequestDto history', () => {
+  const base = { message: 'gym', timeZone: 'Europe/Sarajevo' };
+  const entry = { role: 'user', content: 'Which workout is best?' };
+
+  it('accepts a missing or valid history', async () => {
+    expect(await errorsFor(ChatRequestDto, base)).toEqual([]);
+    expect(
+      await errorsFor(ChatRequestDto, { ...base, history: [entry] }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['too many entries', Array.from({ length: 11 }, () => entry)],
+    ['an invalid role', [{ role: 'system', content: 'x' }]],
+    ['oversized content', [{ role: 'user', content: 'x'.repeat(2001) }]],
+    ['an unknown field', [{ ...entry, extra: true }]],
+  ])('rejects %s', async (_name, history) => {
+    expect(await errorsFor(ChatRequestDto, { ...base, history })).toEqual([
+      'history',
+    ]);
+  });
+});
+
+describe('ChatRequestDto selectedDate', () => {
+  const base = { message: 'Hi', timeZone: 'Europe/Sarajevo' };
+
+  it.each([undefined, '2026-10-25'])('accepts %p', async (selectedDate) => {
+    expect(await errorsFor(ChatRequestDto, { ...base, selectedDate })).toEqual(
+      [],
+    );
+  });
+
+  it.each(['2026-02-30', '2026-10-25T00:00:00Z', 'today'])(
+    'rejects %p',
+    async (selectedDate) => {
+      expect(
+        await errorsFor(ChatRequestDto, { ...base, selectedDate }),
+      ).toEqual(['selectedDate']);
+    },
+  );
+});
 
 async function errorsFor<T extends object>(
   cls: new () => T,
