@@ -1,6 +1,6 @@
 ---
-sourceId: healty-workout-planning
-organization: Healty
+sourceId: healthy-workout-planning
+organization: healthy
 title: Workout Planning
 ---
 
