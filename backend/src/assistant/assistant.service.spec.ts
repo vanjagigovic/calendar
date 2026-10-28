@@ -329,6 +329,31 @@ describe('AssistantService.chat', () => {
   }
 
   describe('interest-based scope enforcement', () => {
+    it('allows built-in knowledge topics even when the user has no profile interests', async () => {
+      const create = createWithScope('in_scope');
+      create.mockResolvedValueOnce(
+        textResponse('Regular sleep routines can support wellbeing.'),
+      );
+      mockOpenAI(create);
+
+      const ctx = createService();
+      withInterests(ctx);
+
+      const result = await ctx.service.chat(
+        'user-1',
+        'How can I build a healthier sleep routine?',
+        'UTC',
+      );
+
+      expect(result.answer).toBe(
+        'Regular sleep routines can support wellbeing.',
+      );
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(classifierRequest(create).messages[0]?.content).toContain(
+        'health, learning, and productivity',
+      );
+    });
+
     it('refuses out-of-scope questions without a second model call or tools', async () => {
       const create = createWithScope('out_of_scope');
       mockOpenAI(create);
@@ -418,10 +443,10 @@ describe('AssistantService.chat', () => {
           },
       );
       expect(requests[0]?.messages[0]?.content).toContain(
-        'Allowed interests: ["React"].',
+        'Allowed profile interests: ["React"].',
       );
       expect(requests[2]?.messages[0]?.content).toContain(
-        'Allowed interests: ["fitness","healthy food","workouts"].',
+        'Allowed profile interests: ["fitness","healthy food","workouts"].',
       );
       expect(requests[2]?.messages[0]?.content).not.toContain('"React"]');
       expect(allowed.answer).toBe('React is a UI library.');
@@ -496,7 +521,7 @@ describe('AssistantService.chat', () => {
         ctx.service.chat('user-1', 'What is on Aug 26?', 'Europe/Sarajevo'),
       ).resolves.toEqual({ answer: 'You are free.' });
       expect(classifierRequest(create).messages[0]?.content).toContain(
-        'Allowed interests: none.',
+        'Allowed profile interests: none',
       );
       expect(ctx.findAll).toHaveBeenCalledTimes(1);
     });
@@ -518,7 +543,7 @@ describe('AssistantService.chat', () => {
       expect(result.answer).toBe('What would you like help with at the gym?');
       const request = classifierRequest(create);
       expect(request.messages[0]?.content).toContain(
-        'Allowed interests: ["gym","healthy food","workouts"].',
+        'Allowed profile interests: ["gym","healthy food","workouts"].',
       );
       expect(request.messages[0]?.content).toContain(
         'A short message is not ambiguous merely because it is short.',
@@ -598,7 +623,7 @@ describe('AssistantService.chat', () => {
         messages: { role: string; content: string }[];
       };
       expect(secondClassifier.messages[0]?.content).toContain(
-        'Allowed interests: ["fitness"].',
+        'Allowed profile interests: ["fitness"].',
       );
       expect(secondClassifier.messages[0]?.content).not.toContain('React');
       expect(secondClassifier.messages[1]?.content).toContain(
@@ -606,7 +631,7 @@ describe('AssistantService.chat', () => {
       );
       // The first request classified the claim against the stored interests only.
       expect(classifierRequest(create).messages[0]?.content).toContain(
-        'Allowed interests: ["fitness"].',
+        'Allowed profile interests: ["fitness"].',
       );
       expect(classifierRequest(create).messages[0]?.content).not.toContain(
         'healthy food',
@@ -660,7 +685,7 @@ describe('AssistantService.chat', () => {
       const request = classifierRequest(create);
       expect(request.messages[0]?.content).not.toContain('programming is now');
       expect(request.messages[0]?.content).toContain(
-        'Allowed interests: ["fitness"].',
+        'Allowed profile interests: ["fitness"].',
       );
       expect(request.messages[1]?.role).toBe('user');
       expect(request.messages[1]?.content).toContain('(untrusted)');
