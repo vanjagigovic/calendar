@@ -13,6 +13,7 @@ import {
 import type { EventsService } from '../events/events.service';
 import type { EventOccurrenceResponseDto } from '../events/dto/event-response-dto';
 import { AssistantService, findFirstFreeInterval } from './assistant.service';
+import type { KnowledgeService } from './knowledge/knowledge.service';
 import type { ProfileService } from '../profile/profile.service';
 
 jest.mock('openai', () => ({
@@ -137,7 +138,7 @@ function createService(result: EventOccurrenceResponseDto[] = []) {
   const eventsService = { findAll } as unknown as EventsService;
   const profileService = { findOne } as unknown as ProfileService;
   const search = jest.fn().mockReturnValue({ passages: [] });
-  const knowledgeService = { search } as unknown as import('./knowledge/knowledge.service').KnowledgeService;
+  const knowledgeService = { search } as unknown as KnowledgeService;
 
   const service = new AssistantService(
     eventsService,
@@ -417,7 +418,8 @@ describe('AssistantService.chat', () => {
             documentId: 'productivity/focus-time-policy',
             category: 'productivity',
             title: 'Focus Time Policy',
-            content: 'Protect focus time by blocking calendar hours for deep work.',
+            content:
+              'Protect focus time by blocking calendar hours for deep work.',
           },
         ],
       });
