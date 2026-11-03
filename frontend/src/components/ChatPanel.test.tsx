@@ -49,6 +49,9 @@ describe("ChatPanel", () => {
  it("sends free text to the API and displays the assistant response", async () => {
   vi.mocked(sendChatMessage).mockResolvedValue({
     answer: "Your day looks manageable!",
+    sourceIds: [],
+    needsReview: false,
+    reasonCode: "supported",
   });
 
   renderPanel();
@@ -76,8 +79,18 @@ describe("ChatPanel", () => {
 
   it("sends earlier messages as history for follow-ups, excluding the new message", async () => {
     vi.mocked(sendChatMessage)
-      .mockResolvedValueOnce({ answer: "What are your goals?" })
-      .mockResolvedValueOnce({ answer: "What would you like at the gym?" });
+      .mockResolvedValueOnce({
+        answer: "What are your goals?",
+        sourceIds: [],
+        needsReview: false,
+        reasonCode: "supported",
+      })
+      .mockResolvedValueOnce({
+        answer: "What would you like at the gym?",
+        sourceIds: [],
+        needsReview: false,
+        reasonCode: "supported",
+      });
 
     renderPanel();
     const input = screen.getByLabelText("Message to AI Assistant");
