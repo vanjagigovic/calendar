@@ -660,18 +660,61 @@ export class AssistantService {
         );
       }
 
-      messages.push(assistantMessage);
+      if (response.choices[0]?.finish_reason === 'length') {
+        throw new InternalServerErrorException(
+          'The AI assistant response was truncated',
+        );
+      }
 
-      if (!assistantMessage.tool_calls?.length) {
+      if (response.choices[0]?.finish_reason === 'content_filter') {
+        throw new InternalServerErrorException(
+          'The AI assistant response was blocked by the content filter',
+        );
+      }
+
+      if (
+        typeof assistantMessage.refusal === 'string' &&
+        assistantMessage.refusal.trim()
+      ) {
+        return {
+          answer: assistantMessage.refusal,
+          sourceIds: [],
+          needsReview: false,
+          reasonCode: 'refusal',
+        };
+      }
+
+      const finishReason = response.choices[0]?.finish_reason;
+
+      if (finishReason === 'tool_calls') {
+        if (!assistantMessage.tool_calls?.length) {
+          throw new InternalServerErrorException(
+            'The AI assistant returned an invalid tool-call response',
+          );
+        }
+
+        messages.push(assistantMessage);
+      } else if (finishReason === 'stop') {
+        if (assistantMessage.tool_calls?.length) {
+          throw new InternalServerErrorException(
+            'The AI assistant returned tool calls with an invalid finish reason',
+          );
+        }
+
         const answer = assistantMessage.content;
 
-        if (typeof answer !== 'string') {
+        if (typeof answer !== 'string' || !answer.trim()) {
           throw new InternalServerErrorException(
             'The AI assistant returned an empty response',
           );
         }
 
+        messages.push(assistantMessage);
         return parseAssistantResponse(answer, availableSourceIds);
+      } else {
+        throw new InternalServerErrorException(
+          'The AI assistant returned an unsupported finish reason',
+        );
       }
 
       for (const toolCall of assistantMessage.tool_calls) {

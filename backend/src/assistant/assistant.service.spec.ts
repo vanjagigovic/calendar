@@ -1087,6 +1087,109 @@ describe('AssistantService.chat', () => {
     expect(findAll).not.toHaveBeenCalled();
   });
 
+  it('returns an OpenAI refusal as a structured response without parsing its content', async () => {
+    const create = createWithScope();
+    create.mockResolvedValueOnce({
+      choices: [
+        {
+          index: 0,
+          finish_reason: 'stop',
+          message: {
+            role: 'assistant',
+            content: '{this is not JSON',
+            refusal: 'I cannot help with that request.',
+          },
+        },
+      ],
+    });
+    mockOpenAI(create);
+    const { service } = createService();
+
+    await expect(service.chat('user-1', 'A request', 'UTC')).resolves.toEqual({
+      answer: 'I cannot help with that request.',
+      sourceIds: [],
+      needsReview: false,
+      reasonCode: 'refusal',
+    });
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    {
+      finishReason: 'length',
+      errorMessage: 'The AI assistant response was truncated',
+    },
+    {
+      finishReason: 'content_filter',
+      errorMessage:
+        'The AI assistant response was blocked by the content filter',
+    },
+  ])(
+    'rejects a response with finish_reason $finishReason before parsing content',
+    async ({ finishReason, errorMessage }) => {
+      const create = createWithScope();
+      create.mockResolvedValueOnce({
+        choices: [
+          {
+            index: 0,
+            finish_reason: finishReason,
+            message: {
+              role: 'assistant',
+              content: '{incomplete JSON',
+              refusal: null,
+            },
+          },
+        ],
+      });
+      mockOpenAI(create);
+      const { service } = createService();
+
+      await expect(service.chat('user-1', 'A request', 'UTC')).rejects.toThrow(
+        errorMessage,
+      );
+    },
+  );
+
+  it.each([
+    { description: 'empty string', content: '' },
+    { description: 'null', content: null },
+  ])(
+    'rejects $description content for a stopped response',
+    async ({ content }) => {
+      const create = createWithScope();
+      create.mockResolvedValueOnce({
+        choices: [
+          {
+            index: 0,
+            finish_reason: 'stop',
+            message: {
+              role: 'assistant',
+              content,
+              refusal: null,
+            },
+          },
+        ],
+      });
+      mockOpenAI(create);
+      const { service } = createService();
+
+      await expect(
+        service.chat('user-1', 'A request', 'UTC'),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    },
+  );
+
+  it('rejects invalid JSON when finish_reason is stop', async () => {
+    const create = createWithScope();
+    create.mockResolvedValueOnce(textResponse('{not valid JSON'));
+    mockOpenAI(create);
+    const { service } = createService();
+
+    await expect(
+      service.chat('user-1', 'A request', 'UTC'),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
+  });
+
   it.each([
     ['2026-10-24', '2026-10-23T22:00:00.000Z', '2026-10-24T22:00:00.000Z'],
     // DST ends on this date in Europe/Sarajevo, so the day is 25 hours long.
