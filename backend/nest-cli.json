@@ -7,7 +7,7 @@
     "assets": [
       {
         "include": "assistant/knowledge/documents/**/*.md",
-        "outDir": "dist"
+        "outDir": "dist/src"
       }
     ]
   }
