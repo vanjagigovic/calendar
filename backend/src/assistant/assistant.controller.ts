@@ -20,6 +20,7 @@ import { FreeSlotResponseDto } from './dto/free-slot-response.dto';
 import { ChatRequestDto } from './dto/chat-request.dto';
 import { Throttle } from '@nestjs/throttler';
 import { AssistantRateLimitGuard } from './guards/assistant-rate-limit.guard';
+import { AssistantResponseDto } from './dto/assistant-response.dto';
 
 @ApiTags('Assistant')
 @Controller('assistant')
@@ -36,6 +37,7 @@ export class AssistantController {
   })
   @ApiOkResponse({
     description: 'The assistant response.',
+    type: AssistantResponseDto,
   })
   @ApiBadRequestResponse({
     description: 'The message is invalid.',

@@ -31,6 +31,13 @@ describe("assistant paths", () => {
 });
 
 describe("assistant api", () => {
+  const chatResponse = {
+    answer: "Hello!",
+    sourceIds: [],
+    needsReview: false,
+    reasonCode: "supported",
+  } as const;
+
   it("calls apiRequest with the built paths", async () => {
     vi.mocked(apiRequest).mockResolvedValue([]);
 
@@ -48,7 +55,7 @@ describe("assistant api", () => {
   });
 
   it("sends a free-text message to the chat endpoint", async () => {
-  vi.mocked(apiRequest).mockResolvedValue({ answer: "Hello!" });
+  vi.mocked(apiRequest).mockResolvedValue(chatResponse);
 
   const response = await sendChatMessage("Hello", "UTC", "2026-10-25");
 
@@ -62,11 +69,14 @@ describe("assistant api", () => {
     }),
   });
 
-  expect(response).toEqual({ answer: "Hello!" });
+  expect(response).toEqual(chatResponse);
 });
 
   it("sends recent conversation history with the chat request", async () => {
-    vi.mocked(apiRequest).mockResolvedValue({ answer: "ok" });
+    vi.mocked(apiRequest).mockResolvedValue({
+      ...chatResponse,
+      answer: "ok",
+    });
 
     await sendChatMessage("gym", "UTC", "2026-10-25", [
       { role: "user", content: "Which workout is best?" },
@@ -81,5 +91,73 @@ describe("assistant api", () => {
         history: [{ role: "user", content: "Which workout is best?" }],
       }),
     });
+  });
+
+  it("rejects an invalid structured chat response", async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ answer: "Missing metadata" });
+
+    await expect(sendChatMessage("Hello", "UTC")).rejects.toThrow(
+      "The assistant returned an invalid response.",
+    );
+  });
+
+  it.each([
+    { reasonCode: "supported", needsReview: false },
+    { reasonCode: "refusal", needsReview: false },
+    { reasonCode: "insufficient_evidence", needsReview: true },
+    { reasonCode: "conflicting_sources", needsReview: true },
+    { reasonCode: "requires_review", needsReview: true },
+  ])(
+    "accepts $reasonCode with needsReview $needsReview",
+    async ({ reasonCode, needsReview }) => {
+      const payload = { ...chatResponse, sourceIds: ["s1"], reasonCode, needsReview };
+      vi.mocked(apiRequest).mockResolvedValue(payload);
+
+      await expect(sendChatMessage("Hello", "UTC")).resolves.toEqual(payload);
+    },
+  );
+
+  it.each([
+    {
+      name: "missing field",
+      payload: { answer: "a", sourceIds: [], needsReview: false },
+    },
+    { name: "extra field", payload: { ...chatResponse, extra: true } },
+    { name: "invalid answer type", payload: { ...chatResponse, answer: 1 } },
+    { name: "empty answer", payload: { ...chatResponse, answer: "  " } },
+    {
+      name: "invalid sourceIds type",
+      payload: { ...chatResponse, sourceIds: "s1" },
+    },
+    {
+      name: "non-string sourceIds items",
+      payload: { ...chatResponse, sourceIds: [1] },
+    },
+    {
+      name: "blank source ID",
+      payload: { ...chatResponse, sourceIds: ["  "] },
+    },
+    {
+      name: "invalid needsReview type",
+      payload: { ...chatResponse, needsReview: "false" },
+    },
+    {
+      name: "unknown reasonCode",
+      payload: { ...chatResponse, reasonCode: "unknown" },
+    },
+    {
+      name: "supported with needsReview true",
+      payload: { ...chatResponse, needsReview: true },
+    },
+    {
+      name: "requires_review with needsReview false",
+      payload: { ...chatResponse, reasonCode: "requires_review" },
+    },
+  ])("rejects $name", async ({ payload }) => {
+    vi.mocked(apiRequest).mockResolvedValue(payload);
+
+    await expect(sendChatMessage("Hello", "UTC")).rejects.toThrow(
+      "The assistant returned an invalid response.",
+    );
   });
 });

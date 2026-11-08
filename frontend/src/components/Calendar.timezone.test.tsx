@@ -74,7 +74,12 @@ describe("selected date when the browser zone differs from the view zone", () =>
     vi.resetAllMocks();
     vi.mocked(getDayEvents).mockResolvedValue([]);
     vi.mocked(findFreeSlot).mockResolvedValue({ freeInterval: null });
-    vi.mocked(sendChatMessage).mockResolvedValue({ answer: "ok" });
+    vi.mocked(sendChatMessage).mockResolvedValue({
+      answer: "ok",
+      sourceIds: [],
+      needsReview: false,
+      reasonCode: "supported",
+    });
   });
 
   it("runs the browser in a different zone than the view zone", () => {

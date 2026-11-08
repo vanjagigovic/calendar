@@ -102,6 +102,11 @@ export function ChatPanel({ date, timeZone, onClose }: ChatPanelProps) {
             <Typography variant="body2" component="span">
               {message.content}
             </Typography>
+            {message.needsReview ? (
+              <Typography variant="caption" component="div">
+                {t("chatNeedsReview")}
+              </Typography>
+            ) : null}
           </Box>
         ))}
 

@@ -43,14 +43,20 @@ export function useChatConversation({
   }, []);
 
   const appendMessage = useCallback(
-    (role: ChatMessage["role"], content: string) => {
-      setMessages((current) => [...current, createChatMessage(role, content)]);
+    (role: ChatMessage["role"], content: string, needsReview = false) => {
+      setMessages((current) => [
+        ...current,
+        createChatMessage(role, content, needsReview),
+      ]);
     },
     [],
   );
 
   const runAction = useCallback(
-    async (userText: string, produceReply: () => Promise<string>) => {
+    async (
+      userText: string,
+      produceReply: () => Promise<string | { answer: string; needsReview: boolean }>,
+    ) => {
       if (pendingRef.current) {
         return;
       }
@@ -63,7 +69,11 @@ export function useChatConversation({
         const reply = await produceReply();
 
         if (mountedRef.current) {
-          appendMessage("assistant", reply);
+          if (typeof reply === "string") {
+            appendMessage("assistant", reply);
+          } else {
+            appendMessage("assistant", reply.answer, reply.needsReview);
+          }
         }
       } catch (error) {
         if (mountedRef.current) {
@@ -84,7 +94,6 @@ export function useChatConversation({
     [appendMessage, t],
   );
 
-  // Free text is not understood yet; reply with a fixed hint, never calendar data.
   const sendMessage = useCallback(
     (text: string) => {
       const content = text.trim();
@@ -100,8 +109,7 @@ export function useChatConversation({
             role,
             content: text.slice(0, MAX_HISTORY_CONTENT_LENGTH),
           }));
-        const response = await sendChatMessage(content, timeZone, date, history);
-        return response.answer;
+        return sendChatMessage(content, timeZone, date, history);
       });
     },
     [date, runAction, timeZone],

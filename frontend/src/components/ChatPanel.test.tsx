@@ -49,6 +49,9 @@ describe("ChatPanel", () => {
  it("sends free text to the API and displays the assistant response", async () => {
   vi.mocked(sendChatMessage).mockResolvedValue({
     answer: "Your day looks manageable!",
+    sourceIds: [],
+    needsReview: false,
+    reasonCode: "supported",
   });
 
   renderPanel();
@@ -76,8 +79,18 @@ describe("ChatPanel", () => {
 
   it("sends earlier messages as history for follow-ups, excluding the new message", async () => {
     vi.mocked(sendChatMessage)
-      .mockResolvedValueOnce({ answer: "What are your goals?" })
-      .mockResolvedValueOnce({ answer: "What would you like at the gym?" });
+      .mockResolvedValueOnce({
+        answer: "What are your goals?",
+        sourceIds: [],
+        needsReview: false,
+        reasonCode: "supported",
+      })
+      .mockResolvedValueOnce({
+        answer: "What would you like at the gym?",
+        sourceIds: [],
+        needsReview: false,
+        reasonCode: "supported",
+      });
 
     renderPanel();
     const input = screen.getByLabelText("Message to AI Assistant");
@@ -100,6 +113,35 @@ describe("ChatPanel", () => {
         { role: "assistant", content: "What are your goals?" },
       ],
     );
+  });
+
+  it("shows a review warning without adding it to conversation history", async () => {
+    vi.mocked(sendChatMessage)
+      .mockResolvedValueOnce({
+        answer: "There is insufficient evidence.",
+        sourceIds: [],
+        needsReview: true,
+        reasonCode: "insufficient_evidence",
+      })
+      .mockResolvedValueOnce({
+        answer: "What else?",
+        sourceIds: [],
+        needsReview: false,
+        reasonCode: "supported",
+      });
+    renderPanel();
+    const input = screen.getByLabelText("Message to AI Assistant");
+    fireEvent.change(input, { target: { value: "First question" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(await screen.findByText("This response needs review; verify it before relying on it.")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "Follow up" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await screen.findByText("What else?");
+    expect(sendChatMessage).toHaveBeenNthCalledWith(2, "Follow up", ZONE, DATE, [
+      { role: "user", content: "First question" },
+      { role: "assistant", content: "There is insufficient evidence." },
+    ]);
   });
 
   it("does not submit on Shift+Enter", () => {
