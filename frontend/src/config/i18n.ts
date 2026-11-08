@@ -32,6 +32,7 @@ void i18next.use(initReactI18next).init({
                 chatFreeSlotPastDay: '{{date}} has already ended, so there is no time left to search.',
                 chatRequestFailed: 'Sorry, that request failed: {{message}}',
                 chatRequestFailedFallback: 'Unable to complete the request.',
+                chatNeedsReview: 'This response needs review; verify it before relying on it.',
                 chatPlaceholder: 'Ask a question...',
                 chatMessageLabel: 'Message to AI Assistant',
                 chatSend: 'Send message',

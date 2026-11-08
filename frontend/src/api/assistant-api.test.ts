@@ -134,6 +134,10 @@ describe("assistant api", () => {
       payload: { ...chatResponse, sourceIds: [1] },
     },
     {
+      name: "blank source ID",
+      payload: { ...chatResponse, sourceIds: ["  "] },
+    },
+    {
       name: "invalid needsReview type",
       payload: { ...chatResponse, needsReview: "false" },
     },

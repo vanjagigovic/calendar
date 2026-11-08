@@ -471,7 +471,19 @@ export class AssistantService {
       },
     });
 
-    const content = response.choices[0]?.message?.content;
+    const choice = response.choices[0];
+    if (
+      choice?.finish_reason !== 'stop' ||
+      !choice.message ||
+      choice.message.refusal ||
+      choice.message.tool_calls?.length
+    ) {
+      throw new InternalServerErrorException(
+        'The AI assistant could not classify the request',
+      );
+    }
+
+    const content = choice.message.content;
     let classification: unknown;
 
     try {
@@ -484,6 +496,8 @@ export class AssistantService {
     if (
       typeof classification !== 'object' ||
       classification === null ||
+      Array.isArray(classification) ||
+      Object.keys(classification).length !== 2 ||
       !('scope' in classification) ||
       !MESSAGE_SCOPES.some((allowed) => allowed === classification.scope) ||
       !('requestType' in classification) ||
@@ -672,22 +686,10 @@ export class AssistantService {
         );
       }
 
-      if (
-        typeof assistantMessage.refusal === 'string' &&
-        assistantMessage.refusal.trim()
-      ) {
-        return {
-          answer: assistantMessage.refusal,
-          sourceIds: [],
-          needsReview: false,
-          reasonCode: 'refusal',
-        };
-      }
-
       const finishReason = response.choices[0]?.finish_reason;
 
       if (finishReason === 'tool_calls') {
-        if (!assistantMessage.tool_calls?.length) {
+        if (assistantMessage.refusal || !assistantMessage.tool_calls?.length) {
           throw new InternalServerErrorException(
             'The AI assistant returned an invalid tool-call response',
           );
@@ -699,6 +701,18 @@ export class AssistantService {
           throw new InternalServerErrorException(
             'The AI assistant returned tool calls with an invalid finish reason',
           );
+        }
+
+        if (
+          typeof assistantMessage.refusal === 'string' &&
+          assistantMessage.refusal.trim()
+        ) {
+          return {
+            answer: assistantMessage.refusal,
+            sourceIds: [],
+            needsReview: false,
+            reasonCode: 'refusal',
+          };
         }
 
         const answer = assistantMessage.content;

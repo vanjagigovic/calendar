@@ -582,6 +582,26 @@ describe('AssistantService.chat', () => {
         json_schema: {
           name: 'assistant_response',
           strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              answer: { type: 'string' },
+              sourceIds: { type: 'array', items: { type: 'string' } },
+              needsReview: { type: 'boolean' },
+              reasonCode: {
+                type: 'string',
+                enum: [
+                  'supported',
+                  'insufficient_evidence',
+                  'conflicting_sources',
+                  'requires_review',
+                  'refusal',
+                ],
+              },
+            },
+            required: ['answer', 'sourceIds', 'needsReview', 'reasonCode'],
+            additionalProperties: false,
+          },
         },
       });
     });
@@ -632,6 +652,32 @@ describe('AssistantService.chat', () => {
 
       await expect(
         ctx.service.chat('user-1', 'A factual question', 'UTC'),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    });
+
+    it('rejects a known source ID when a different passage was retrieved', async () => {
+      const create = createWithScope('in_scope', 'knowledge');
+      create.mockResolvedValueOnce(
+        assistantResponse('A factual answer.', {
+          sourceIds: ['productivity-focus-time-policy#2'],
+        }),
+      );
+      mockOpenAI(create);
+      const ctx = createService();
+      ctx.search.mockReturnValue({
+        passages: [
+          {
+            sourceId: 'productivity-meeting-guidelines#2',
+            documentId: 'productivity/meeting-guidelines',
+            category: 'productivity',
+            title: 'Meeting Guidelines',
+            content: 'Invite only people whose participation is necessary.',
+          },
+        ],
+      });
+
+      await expect(
+        ctx.service.chat('user-1', 'How should I plan meetings?', 'UTC'),
       ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
 
@@ -1114,6 +1160,120 @@ describe('AssistantService.chat', () => {
     expect(create).toHaveBeenCalledTimes(2);
   });
 
+  it.each(['length', 'content_filter', 'tool_calls', null])(
+    'rejects a classification with finish reason %s even if its JSON is valid',
+    async (finishReason) => {
+      const create = jest
+        .fn<(...args: never[]) => Promise<unknown>>()
+        .mockResolvedValueOnce({
+          choices: [
+            {
+              finish_reason: finishReason,
+              message: {
+                role: 'assistant',
+                content: JSON.stringify({
+                  scope: 'in_scope',
+                  requestType: 'calendar',
+                }),
+                refusal: null,
+              },
+            },
+          ],
+        });
+      mockOpenAI(create);
+      const ctx = createService();
+
+      await expect(
+        ctx.service.chat('user-1', 'My calendar', 'UTC'),
+      ).rejects.toThrow('The AI assistant could not classify the request');
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(ctx.search).not.toHaveBeenCalled();
+      expect(ctx.findAll).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects a classifier refusal even when it also contains valid JSON', async () => {
+    const create = jest
+      .fn<(...args: never[]) => Promise<unknown>>()
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              content: JSON.stringify({
+                scope: 'in_scope',
+                requestType: 'calendar',
+              }),
+              refusal: 'I cannot classify this.',
+            },
+          },
+        ],
+      });
+    mockOpenAI(create);
+    const ctx = createService();
+    await expect(
+      ctx.service.chat('user-1', 'My calendar', 'UTC'),
+    ).rejects.toThrow('The AI assistant could not classify the request');
+    expect(ctx.findAll).not.toHaveBeenCalled();
+  });
+
+  it.each(['tool_calls', 'unexpected', null])(
+    'rejects refusal with invalid finish reason %s',
+    async (finishReason) => {
+      const create = createWithScope();
+      create.mockResolvedValueOnce({
+        choices: [
+          {
+            finish_reason: finishReason,
+            message: { role: 'assistant', content: null, refusal: 'No.' },
+          },
+        ],
+      });
+      mockOpenAI(create);
+      const { service, findAll } = createService();
+      await expect(
+        service.chat('user-1', 'A request', 'UTC'),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+      expect(findAll).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    {
+      answer: 'Answer',
+      sourceIds: [],
+      needsReview: false,
+      reasonCode: 'unknown',
+    },
+    {
+      answer: 'Answer',
+      sourceIds: [],
+      needsReview: 'false',
+      reasonCode: 'supported',
+    },
+    {
+      answer: 'Answer',
+      sourceIds: [],
+      needsReview: true,
+      reasonCode: 'supported',
+    },
+    { answer: 'Answer', sourceIds: [], needsReview: false },
+    {
+      answer: 'Answer',
+      sourceIds: [],
+      needsReview: false,
+      reasonCode: 'supported',
+      extra: 1,
+    },
+  ])('rejects invalid structured response metadata', async (payload) => {
+    const create = createWithScope();
+    create.mockResolvedValueOnce(textResponse(JSON.stringify(payload)));
+    mockOpenAI(create);
+    const { service } = createService();
+    await expect(
+      service.chat('user-1', 'A request', 'UTC'),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
+  });
   it.each([
     {
       finishReason: 'length',
@@ -1135,7 +1295,12 @@ describe('AssistantService.chat', () => {
             finish_reason: finishReason,
             message: {
               role: 'assistant',
-              content: '{incomplete JSON',
+              content: JSON.stringify({
+                answer: 'Apparently complete.',
+                sourceIds: [],
+                needsReview: false,
+                reasonCode: 'supported',
+              }),
               refusal: null,
             },
           },

@@ -65,7 +65,9 @@ function isSendChatMessageResponse(
     typeof response.answer === "string" &&
     response.answer.trim().length > 0 &&
     Array.isArray(response.sourceIds) &&
-    response.sourceIds.every((sourceId) => typeof sourceId === "string") &&
+    response.sourceIds.every(
+      (sourceId) => typeof sourceId === "string" && sourceId.trim().length > 0,
+    ) &&
     typeof response.needsReview === "boolean" &&
     ASSISTANT_REASON_CODES.some(
       (allowedReasonCode: AssistantReasonCode) =>
